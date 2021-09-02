@@ -90,7 +90,7 @@ os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies")
 
 #RESULTAT : ok, y6 est ignoré (pas de connexion arrivant vers x6).
 
-##Jeu de données de Kyriaki
+##Jeu de données E de Kyriaki
 
 # df = pd.read_csv("testKiki.txt",sep=" ",names=["Image", "x", "y", "z", "height"])
 # df.drop(0,0,inplace=True)
@@ -102,10 +102,13 @@ os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies")
 # X = data[:5,:]
 # Y = data[5:,:]
 
-##Données de la détection 001
+##Jeu de données F : détection 001, transport entre l'image i et l'image i+1
 
-#attention, j'ai changé le fichier detection.txt en retirant les 2 lignes de configuration
-df = pd.read_csv("detection.txt",sep=" ",names=["Image", "x", "y", "z", "height"])
+#dans ce jeu données, la façon d'extraire le fichier et de construire le tableau
+#d'indices est un peu pourrie. Je n'avais pas vu que c'était déjà fait dans show_
+#detection.
+
+df = pd.read_csv("file://"+os.getcwd()+"/Challenge_AMIES_EURECAM/data_detection/001/detection.txt",sep=" ",names=["Image", "x", "y", "z", "height"],skiprows=2)
 df.drop(0,0,inplace=True)
 
 #on transforme le tableau obtenu en un tableau d'entiers
@@ -128,154 +131,233 @@ while imageCourante < imageMax:
         j += 1
 #print(indices)
 
-#je supprime la colonne des z ; sinon, il faut modifier la définition de distance
-data = np.delete(data, obj = 3, axis = 1)
-
 #on veut comparer les images i et i+1, i étant à choisir :
-i = 4
+i = 5
 X = data[indices[i-imageMin, 0]:indices[i-imageMin, 1]]
 Y = data[indices[i-imageMin+1, 0]:indices[i-imageMin+1, 1]]
+
+##Jeux de données du sujet
+
+# #copier-coller de show_detection.py
+#
+# dataset = "001"
+# # dataset = "002"
+# # dataset = "003"
+# # dataset = "004"
+# # dataset = "005"
+# # dataset = "006"
+# # dataset = "007"
+# # dataset = "008"
+# # dataset = "009"
+# # dataset = "010"
+#
+# detfile = "data_detection/" + dataset + "/detection.txt"
+# imgdir  = "data_detection/" + dataset + "/images/"
+#
+# file = open(detfile, "r")
+# l0 = file.readline()
+# l1 = file.readline()
+# f,cx,cy = np.array(l1.split()).astype(int)
+# file.close()
+#
+# detections = pd.read_csv(detfile,delimiter=" ",skiprows=2)
+# # print(detections.head(20))
+#
+# images = np.unique(detections["#image"].values)
+# # print("images : ",images)
 
 #=======================================================#
                    #-MATRICE DE COUT-#
 #=======================================================#
 
+#u[-1] correspond à la hauteur, que l'on ait supprimé la colonne z ou non
 def distance(u,v):
-    return(np.linalg.norm(u[1:]-v[1:]))
+    return(np.linalg.norm(u[1:2]-v[1:2]) + np.linalg.norm(u[-1]-v[-1]))
 
-nbPtsNuage1 = X.shape[0]
-nbPtsNuage2 = Y.shape[0]
-C = np.zeros([nbPtsNuage1, nbPtsNuage2])
+def computeTransport(X, Y):
 
-for i in range(nbPtsNuage1):
+    nbPtsNuage1 = X.shape[0]
+    nbPtsNuage2 = Y.shape[0]
+    C = np.zeros([nbPtsNuage1, nbPtsNuage2])
+
+    for i in range(nbPtsNuage1):
+        for j in range(nbPtsNuage2):
+            C[i,j] = distance(X[i],Y[j])
+
+    c = np.ravel(C) #lignes de C
+    #l'ordre de notre vecteur (pour le problème linèaire) est :
+    #p11, p12, p13, p14, p15, p21, p22, ... etc
+    #où "pij"= connexion entre le point i du nuage1 et le point j du nuage2.
+
+    #=======================================================#
+                        #- Contraintes -#
+                    #-MATRICE DE COUPLAGE-#
+                #-RESOLUTION DU PROBLEME DE PL-#
+    #=======================================================#
+
+    nbVariables = nbPtsNuage1*nbPtsNuage2 # En général c'est de la meme taile que c.
+    nbContraintesSortantes = nbPtsNuage1
+    nbContraintesEntrantes = nbPtsNuage2
+    nbContraintes = nbContraintesEntrantes + nbContraintesSortantes
+
+    ##Cas 1 : autant de contraintes entrantes que sortantes
+
+    if nbContraintesSortantes == nbContraintesEntrantes:
+        b_eq = np.ones(nbContraintes)
+        #print(b_eq)
+
+        A_eq = np.zeros([nbContraintes,nbVariables])
+        #print(A_eq.shape)
+        #print(c.shape)
+        #les premières lignes correspondent aux contraintes de sortie. c'est à dire pour
+        #chaque point du Nuage1, il faut le connecter à un seul point du nuage 2.
+        for i in range(nbContraintesSortantes):
+            for j in range(nbContraintesEntrantes):
+                A_eq[i,i*nbContraintesEntrantes +j] = 1
+        #les dernieres lignes correspondent aux contraintes d'entrée. Pour chaque point
+        #dans le nuage d'arrivée, il peut recevoir 1 seul nuage de sortie.
+        for i in range(nbContraintesEntrantes):
+            for j in range(nbContraintesSortantes):
+                A_eq[i + nbContraintesSortantes, i + j*nbContraintesEntrantes] = 1
+
+        #print(A_eq)
+
+        P = linprog(c, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
+        #print(P.x)
+
+    ##Cas 2 : plus de contraintes entrantes que sortantes
+
+    elif nbContraintesSortantes > nbContraintesEntrantes:
+        b_eq = np.zeros(nbContraintes)
+        b_eq[nbContraintesSortantes:] = np.ones(nbContraintesEntrantes)
+        #print('b_eq =', b_eq)
+
+        b_ub = np.zeros(nbContraintes)
+        b_ub[:nbContraintesSortantes] = np.ones(nbContraintesSortantes)
+        #print('b_ub =', b_ub)
+
+        A_eq = np.zeros([nbContraintes,nbVariables])
+        #les premieres lignes sont nulles ; les contraintes d'égalité sont :
+        #dans le nuage d'arrivée, un point doit recevoir pile 1 point de sortie.
+        for i in range(nbContraintesEntrantes):
+            for j in range(nbContraintesSortantes):
+                A_eq[i + nbContraintesSortantes, i + j*nbContraintesEntrantes] = 1
+        #print('A_eq =', A_eq)
+
+        A_ub = np.zeros([nbContraintes,nbVariables])
+        #les contraintes d'inégalité sont les contrainte de sortie, cad pour
+        #chaque point du Nuage1, il faut le connecter à au plus 1 point du nuage 2.
+        for i in range(nbContraintesSortantes):
+            for j in range(nbContraintesEntrantes):
+                A_ub[i,i*nbContraintesEntrantes +j] = 1
+        #print('A_ub =', A_ub)
+
+        P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
+        #print(P.x)
+
+    ##Cas 3 : plus de contraintes sortantes qu'entrantes
+
+    else:
+        b_eq = np.zeros(nbContraintes)
+        b_eq[:nbContraintesSortantes] = np.ones(nbContraintesSortantes)
+        #print('b_eq =', b_eq)
+
+        b_ub = np.zeros(nbContraintes)
+        b_ub[nbContraintesSortantes:] = np.ones(nbContraintesEntrantes)
+        #print('b_ub =', b_ub)
+
+        A_eq = np.zeros([nbContraintes,nbVariables])
+        #les dernières lignes sont nulles ; les contraintes d'égalité sont :
+        #chaque point du nuage de départ doit être connecté à exactement 1 point
+        #du nuage d'arrivée.
+        for i in range(nbContraintesSortantes):
+            for j in range(nbContraintesEntrantes):
+                A_eq[i,i*nbContraintesEntrantes +j] = 1
+        #print('A_eq =', A_eq)
+
+        A_ub = np.zeros([nbContraintes,nbVariables])
+        #les contraintes d'inégalité sont les contrainte d'entrée, cad que
+        #chaque point du Nuage2 ne peut recevoir qu'au plus 1 point du nuage 2.
+        for i in range(nbContraintesEntrantes):
+            for j in range(nbContraintesSortantes):
+                A_ub[i + nbContraintesSortantes, i + j*nbContraintesEntrantes] = 1
+        #print('A_ub =', A_ub)
+
+        P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
+
+    ##Résultat : la matrice de connexion x
+
+    #on 'unravel' le résultat P.x, à la main
+    x = np.array([P.x[k*nbPtsNuage2:(k+1)*nbPtsNuage2] for k in range(nbPtsNuage1)])
+    #x est la matrice de connexion, cad la matrice des pij
+    #print(x)
+    return(x)
+
+#=======================================================#
+                 #-TRACE DU TRANSPORT ENTRE X ET Y-#
+#=======================================================#
+
+def plotTransport(X, Y):
+
+    nbPtsNuage1 = X.shape[0]
+    nbPtsNuage2 = Y.shape[0]
+    x = computeTransport(X, Y)
+
+    plt.clf()
+    #tracé des deux nuages de points initiaux
+    plt.scatter(X[:,1], X[:,2], marker = '+', color = 'blue')
+    plt.scatter(Y[:,1], Y[:,2], marker = 'x', color = 'red')
+    #annotation des hauteurs de chaque point
+    #X[i,-1] correspond toujours à la hauteur de Xi, que l'on ait supprimé la
+    #colonne z ou non.
+    for i in range(nbPtsNuage1):
+        plt.annotate("h =" + str(X[i,-1]), (X[i,1], X[i,2]), color = 'blue', fontsize = 7)
     for j in range(nbPtsNuage2):
-        C[i,j] = distance(X[i],Y[j])
+        plt.annotate("h =" + str(Y[j,-1]), (Y[j,1], Y[j,2]), color = 'red', fontsize = 7)
+    #tracé des connexions
+    for i in range(nbPtsNuage1):
+        for j in range(nbPtsNuage2):
+            if x[i,j] == 1.:
+                plt.plot([X[i,1], Y[j,1]], [X[i,2], Y[j,2]], color = 'green', linewidth = .7)
+    plt.grid()
+    plt.show()
 
-c = np.ravel(C) #lignes de C
-#l'ordre de notre vecteur (pour le problème linèaire) est :
-#p11, p12, p13, p14, p15, p21, p22, ... etc
-#où "pij"= connexion entre le point i du nuage1 et le point j du nuage2.
-
-#=======================================================#
-                    #- Contraintes -#
-                 #-MATRICE DE COUPLAGE-#
-             #-RESOLUTION DU PROBLEME DE PL-#
-#=======================================================#
-
-nbVariables = nbPtsNuage1*nbPtsNuage2 # En général c'est de la meme taile que c.
-nbContraintesSortantes = nbPtsNuage1
-nbContraintesEntrantes = nbPtsNuage2
-nbContraintes = nbContraintesEntrantes + nbContraintesSortantes
-
-##Cas 1 : autant de contraintes entrantes que sortantes
-
-if nbContraintesSortantes == nbContraintesEntrantes:
-    b_eq = np.ones(nbContraintes)
-    #print(b_eq)
-
-    A_eq = np.zeros([nbContraintes,nbVariables])
-    #print(A_eq.shape)
-    #print(c.shape)
-    #les premières lignes correspondent aux contraintes de sortie. c'est à dire pour
-    #chaque point du Nuage1, il faut le connecter à un seul point du nuage 2.
-    for i in range(nbContraintesSortantes):
-        for j in range(nbContraintesEntrantes):
-            A_eq[i,i*nbContraintesEntrantes +j] = 1
-    #les dernieres lignes correspondent aux contraintes d'entrée. Pour chaque point
-    #dans le nuage d'arrivée, il peut recevoir 1 seul nuage de sortie.
-    for i in range(nbContraintesEntrantes):
-        for j in range(nbContraintesSortantes):
-            A_eq[i + nbContraintesSortantes, i + j*nbContraintesEntrantes] = 1
-
-    #print(A_eq)
-
-    P = linprog(c, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
-    #print(P.x)
-
-##Cas 2 : plus de contraintes entrantes que sortantes
-
-elif nbContraintesSortantes > nbContraintesEntrantes:
-    b_eq = np.zeros(nbContraintes)
-    b_eq[nbContraintesSortantes:] = np.ones(nbContraintesEntrantes)
-    #print('b_eq =', b_eq)
-
-    b_ub = np.zeros(nbContraintes)
-    b_ub[:nbContraintesSortantes] = np.ones(nbContraintesSortantes)
-    #print('b_ub =', b_ub)
-
-    A_eq = np.zeros([nbContraintes,nbVariables])
-    #les premieres lignes sont nulles ; les contraintes d'égalité sont :
-    #dans le nuage d'arrivée, un point doit recevoir pile 1 point de sortie.
-    for i in range(nbContraintesEntrantes):
-        for j in range(nbContraintesSortantes):
-            A_eq[i + nbContraintesSortantes, i + j*nbContraintesEntrantes] = 1
-    #print('A_eq =', A_eq)
-
-    A_ub = np.zeros([nbContraintes,nbVariables])
-    #les contraintes d'inégalité sont les contrainte de sortie, cad pour
-    #chaque point du Nuage1, il faut le connecter à au plus 1 point du nuage 2.
-    for i in range(nbContraintesSortantes):
-        for j in range(nbContraintesEntrantes):
-            A_ub[i,i*nbContraintesEntrantes +j] = 1
-    #print('A_ub =', A_ub)
-
-    P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
-    #print(P.x)
-
-##Cas 3 : plus de contraintes sortantes qu'entrantes
-
-else:
-    b_eq = np.zeros(nbContraintes)
-    b_eq[:nbContraintesSortantes] = np.ones(nbContraintesSortantes)
-    print('b_eq =', b_eq)
-
-    b_ub = np.zeros(nbContraintes)
-    b_ub[nbContraintesSortantes:] = np.ones(nbContraintesEntrantes)
-    print('b_ub =', b_ub)
-
-    A_eq = np.zeros([nbContraintes,nbVariables])
-    #les dernières lignes sont nulles ; les contraintes d'égalité sont :
-    #chaque point du nuage de départ doit être connecté à exactement 1 point
-    #du nuage d'arrivée.
-    for i in range(nbContraintesSortantes):
-        for j in range(nbContraintesEntrantes):
-            A_eq[i,i*nbContraintesEntrantes +j] = 1
-    print('A_eq =', A_eq)
-
-    A_ub = np.zeros([nbContraintes,nbVariables])
-    #les contraintes d'inégalité sont les contrainte d'entrée, cad que
-    #chaque point du Nuage2 ne peut recevoir qu'au plus 1 point du nuage 2.
-    for i in range(nbContraintesEntrantes):
-        for j in range(nbContraintesSortantes):
-            A_ub[i + nbContraintesSortantes, i + j*nbContraintesEntrantes] = 1
-    print('A_ub =', A_ub)
-
-    P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
-
-##Résultat : la matrice de connexion x
-
-#on 'unravel' le résultat P.x, à la main
-x = np.array([P.x[k*nbPtsNuage2:(k+1)*nbPtsNuage2] for k in range(nbPtsNuage1)])
-#x est la matrice de connexion, cad la matrice des pij
-print(x)
+#plotTransport(X, Y)
 
 #=======================================================#
-                 #-TRACE DES SOLUTIONS-#
+                 #-FILM COMPLET-#
 #=======================================================#
 
-plt.clf()
-#tracé des deux nuages de points initiaux
-plt.scatter(X[:,1], X[:,2], marker = '+', color = 'blue')
-plt.scatter(Y[:,1], Y[:,2], marker = 'x', color = 'red')
-#annotation des hauteurs de chaque point
-for i in range(nbPtsNuage1):
-    plt.annotate("h =" + str(X[i,3]), (X[i,1], X[i,2]), color = 'blue', fontsize = 7)
-for j in range(nbPtsNuage2):
-    plt.annotate("h =" + str(Y[j,3]), (Y[j,1], Y[j,2]), color = 'red', fontsize = 7)
-#tracé des connexions
-for i in range(nbPtsNuage1):
-    for j in range(nbPtsNuage2):
-        if x[i,j] == 1.:
-            plt.plot([X[i,1], Y[j,1]], [X[i,2], Y[j,2]], color = 'green', linewidth = .7)
-plt.grid()
-plt.show()
+#ATTENTION : cette partie n'est pas encore terminée. Tout le reste marche.
+
+# plt.ion()
+# fig = plt.figure()
+# for i in images:
+#     print("==> image : ",i)
+#     mask = (detections["#image"]==i)
+#     x = detections[mask]["x"].values
+#     y = detections[mask]["y"].values
+#     z = detections[mask]["z"].values
+#     h = detections[mask]["h"].values
+#
+#     plt.clf()
+#
+#     try:
+#         im = imageio.imread(imgdir+"/image-"+str(i).zfill(3)+".png")
+#     except:
+#         im = imageio.imread(imgdir+"/image-"+str(i).zfill(3)+".jpg")
+#
+#     height, width  = im.shape
+#     # print("width = ",width," height = ",height) ## width = 448,  height = 480
+#
+#     ix = 0.5*(x/z*f+cx)
+#     iy = 0.5*(y/z*f+cy)
+#
+#     plt.imshow(im) ## image camera + image capteur
+#     plt.scatter(ix, iy, marker="+",color="red");
+#     input('type enter to continue')
+#     plt.pause(0.05)
+#     plt.draw()
+#
+# plt.ioff()
+# plt.show()
