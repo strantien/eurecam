@@ -1,19 +1,20 @@
 from scipy.optimize import linprog
 import numpy as np
+import matplotlib.pyplot as plt
 
 #=======================================================#
                    #- DONNEES -#
 #=======================================================#
 x1 = [4, 151, -23, 1]
 x2 = [4, 153, 25, 2]
+x3 = [4, 158, 94, 3]
 x4 = [4, 158, 92, 4]
 x5 = [4, 155, 86, 5]
-x3 = [4, 158, 94, 3]
 y1 = [5, 154, -26, 1]
 y2 = [5, 153, 25, 2]
 y3 = [5, 158, 92, 3]
-y5 = [5, 155, 85, 5]
 y4 = [5, 158, 94, 4]
+y5 = [5, 155, 85, 5]
 
 #=======================================================#
                    #-MATRICE DE COUT-#
@@ -34,7 +35,7 @@ for i in range(5):
 c = np.ravel(C) #lignes de C
 #l'ordre de notre vecteur (pour le problème linèaire) est :
 #p11, p12, p13, p14, p15, p21, p22, ... etc
-#où "pij"= conexxion entre le point i du nuage1 et le point j du nuage2.
+#où "pij"= connexion entre le point i du nuage1 et le point j du nuage2.
 
 #=======================================================#
                     #- Contraintes -#
@@ -67,6 +68,31 @@ for i in range(nbContraintesEntrantes):
 
 #print(A_eq)
 
-P = linprog(c,A_eq, b_eq, bounds=(0,1), method='simplex')
+#=======================================================#
+                 #-RESOLUTION DU PROBLEME DE PL-#
+#=======================================================#
 
-print(P)
+P = linprog(c, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
+#print(P.x)
+
+#on 'unravel' le résultat P.x, à la main
+x = np.array([P.x[k*nbPtsNuage2:(k+1)*nbPtsNuage2] for k in range(nbPtsNuage1)])
+#x est la matrice de connexion, cad la matrice des pij
+print(x)
+
+
+#=======================================================#
+                 #-TRACE DES SOLUTIONS-#
+#=======================================================#
+
+plt.clf()
+#tracé des deux nuages de points initiaux
+plt.scatter(X[:,1], X[:,2], marker = '+')
+plt.scatter(Y[:,1], Y[:,2], marker = 'x')
+#tracé des connexions
+for i in range(nbPtsNuage1):
+    for j in range(nbPtsNuage2):
+        if x[i,j] == 1.:
+            plt.plot([X[i,1], Y[j,1]], [X[i,2], Y[j,2]], color = 'green', linewidth = .7)
+plt.grid()
+plt.show()
