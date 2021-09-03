@@ -1,6 +1,9 @@
 from scipy.optimize import linprog
 import numpy as np
 
+
+
+###modification 1
 #=======================================================#
                    #- DONNEES -#
 #=======================================================#
