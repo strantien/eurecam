@@ -14,7 +14,7 @@ import imageio
 
 #changer le répertoire de travail en fonction de votre PC
 os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies/Challenge_AMIES_EURECAM/")
-#os.chdir("pedro")
+#os.chdir("/Users/pjaramil/Documents/gitFiles/Challenge_AMIES_EURECAM")
 #os.chdir("kiki")
 
 ##Jeu de données A (nbPtsNuage1 = nbPtsNuage2)
