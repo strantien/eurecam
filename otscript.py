@@ -10,7 +10,7 @@ import imageio
 #=======================================================#
 
 #changer le répertoire de travail en fonction de votre PC
-os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies")
+os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies/Challenge_AMIES_EURECAM/")
 #os.chdir("pedro")
 #os.chdir("kiki")
 
@@ -107,7 +107,7 @@ os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies")
 
 # #la façon d'extraire le fichier et de construire le tableau d'indices est un peu pourrie. Je n'avais pas vu que c'était déjà fait dans show_detection.
 #
-# df = pd.read_csv("file://"+os.getcwd()+"/Challenge_AMIES_EURECAM/data_detection/001/detection.txt",sep=" ",names=["Image", "x", "y", "z", "height"],skiprows=2)
+# df = pd.read_csv("file://"+os.getcwd()+"/data_detection/001/detection.txt",sep=" ",names=["Image", "x", "y", "z", "height"],skiprows=2)
 # df.drop(0,0,inplace=True)
 #
 # #on transforme le tableau obtenu (strings) en un tableau d'entiers : data[:,0] contient les numéros d'images, qui doivent être entiers
@@ -148,8 +148,8 @@ dataset = "001"
 # dataset = "009"
 # dataset = "010"
 
-detfile = "Challenge_AMIES_EURECAM/data_detection/" + dataset + "/detection.txt"
-imgdir  = "Challenge_AMIES_EURECAM/data_detection/" + dataset + "/images/"
+detfile = "data_detection/" + dataset + "/detection.txt"
+imgdir  = "data_detection/" + dataset + "/images/"
 
 file = open(detfile, "r")
 l0 = file.readline()
@@ -173,6 +173,8 @@ images = np.unique(detections["#image"].values)
 #u[1:2] correspondent à x_u, y_u et u[-1] correspond à la hauteur
 def distance(u,v):
     return(np.linalg.norm(u[1:2]-v[1:2]) + np.linalg.norm(u[-1]-v[-1]))
+
+method = 'revised simplex'
 
 def computeTransport(X, Y):
 
@@ -209,7 +211,7 @@ def computeTransport(X, Y):
             for j in range(nbPtsNuage1):
                 A_eq[i + nbPtsNuage1, i + j*nbPtsNuage2] = 1
 
-        P = linprog(c, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
+        P = linprog(c, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method=method)
 
     ##Cas 2 : nbPtsNuage1 > nbPtsNuage2
 
@@ -234,7 +236,7 @@ def computeTransport(X, Y):
             for j in range(nbPtsNuage2):
                 A_ub[i,i*nbPtsNuage2 +j] = 1
 
-        P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
+        P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method=method)
 
     ##Cas 3 : nbPtsNuage1 < nbPtsNuage2
 
@@ -260,7 +262,7 @@ def computeTransport(X, Y):
             for j in range(nbPtsNuage1):
                 A_ub[i + nbPtsNuage1, i + j*nbPtsNuage2] = 1
 
-        P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
+        P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method=method)
 
     ##Résultat : la matrice de connexion x
 
@@ -328,7 +330,7 @@ for i in images[:-1]:
 
     plt.imshow(im)
     plt.scatter(ixX, iyX, marker="+",color="blue")
-    plt.scatter(ixX, iyX, marker="x",color="red")
+    plt.scatter(ixY, iyY, marker="x",color="red")
     for i in range(nbPtsNuage1):
         for j in range(nbPtsNuage2):
             if couplage[i,j] == 1.:
