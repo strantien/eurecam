@@ -13,7 +13,7 @@ import imageio
 #=======================================================#
 
 #changer le répertoire de travail en fonction de votre PC
-os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies")
+os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies/Challenge_AMIES_EURECAM/")
 #os.chdir("pedro")
 #os.chdir("kiki")
 
@@ -110,7 +110,7 @@ os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies")
 
 # #la façon d'extraire le fichier et de construire le tableau d'indices est un peu pourrie. Je n'avais pas vu que c'était déjà fait dans show_detection.
 #
-# df = pd.read_csv("file://"+os.getcwd()+"/Challenge_AMIES_EURECAM/data_detection/001/detection.txt",sep=" ",names=["Image", "x", "y", "z", "height"],skiprows=2)
+# df = pd.read_csv("file://"+os.getcwd()+"/data_detection/001/detection.txt",sep=" ",names=["Image", "x", "y", "z", "height"],skiprows=2)
 # df.drop(0,0,inplace=True)
 #
 # #on transforme le tableau obtenu (strings) en un tableau d'entiers : data[:,0] contient les numéros d'images, qui doivent être entiers
@@ -151,8 +151,8 @@ dataset = "001"
 # dataset = "009"
 # dataset = "010"
 
-detfile = "Challenge_AMIES_EURECAM/data_detection/" + dataset + "/detection.txt"
-imgdir  = "Challenge_AMIES_EURECAM/data_detection/" + dataset + "/images/"
+detfile = "data_detection/" + dataset + "/detection.txt"
+imgdir  = "data_detection/" + dataset + "/images/"
 
 file = open(detfile, "r")
 l0 = file.readline()
