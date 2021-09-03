@@ -5,16 +5,13 @@ import pandas as pd
 import os
 import imageio
 
-
-
-###modification 1
 #=======================================================#
                    #- DONNEES -#
 #=======================================================#
 
 #changer le répertoire de travail en fonction de votre PC
 os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies/Challenge_AMIES_EURECAM/")
-#os.chdir("/Users/pjaramil/Documents/gitFiles/Challenge_AMIES_EURECAM")
+#os.chdir("pedro")
 #os.chdir("kiki")
 
 ##Jeu de données A (nbPtsNuage1 = nbPtsNuage2)
@@ -177,6 +174,8 @@ images = np.unique(detections["#image"].values)
 def distance(u,v):
     return(np.linalg.norm(u[1:2]-v[1:2]) + np.linalg.norm(u[-1]-v[-1]))
 
+method = 'revised simplex'
+
 def computeTransport(X, Y):
 
     nbPtsNuage1 = X.shape[0]
@@ -212,7 +211,7 @@ def computeTransport(X, Y):
             for j in range(nbPtsNuage1):
                 A_eq[i + nbPtsNuage1, i + j*nbPtsNuage2] = 1
 
-        P = linprog(c, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
+        P = linprog(c, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method=method)
 
     ##Cas 2 : nbPtsNuage1 > nbPtsNuage2
 
@@ -237,7 +236,7 @@ def computeTransport(X, Y):
             for j in range(nbPtsNuage2):
                 A_ub[i,i*nbPtsNuage2 +j] = 1
 
-        P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
+        P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method=method)
 
     ##Cas 3 : nbPtsNuage1 < nbPtsNuage2
 
@@ -263,7 +262,7 @@ def computeTransport(X, Y):
             for j in range(nbPtsNuage1):
                 A_ub[i + nbPtsNuage1, i + j*nbPtsNuage2] = 1
 
-        P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method='simplex')
+        P = linprog(c, A_ub = A_ub, b_ub = b_ub, A_eq = A_eq, b_eq = b_eq, bounds=(0,1), method=method)
 
     ##Résultat : la matrice de connexion x
 
@@ -331,7 +330,7 @@ for i in images[:-1]:
 
     plt.imshow(im)
     plt.scatter(ixX, iyX, marker="+",color="blue")
-    plt.scatter(ixX, iyX, marker="x",color="red")
+    plt.scatter(ixY, iyY, marker="x",color="red")
     for i in range(nbPtsNuage1):
         for j in range(nbPtsNuage2):
             if couplage[i,j] == 1.:
