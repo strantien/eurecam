@@ -63,25 +63,25 @@ def leavesDomain(trajectoire, xMin,xMax,yMin,yMax):
         vyFinal   = vs[-1][1] #Last velocity in y axis
         if vxFinal > speedTolerance: #moving right
             slowingDown =  vxFinal < (vxMoyenne - speedTolerance)
-            if abs(x-xMax) < abs(vxFinal) & (not slowingDown):
+            if (abs(x-xMax) < abs(vxFinal)) & (not slowingDown):
                 return(True)
             else:
                 return(False)
         if vxFinal < - speedTolerance: #moving left
             slowingDown =  vxFinal > (vxMoyenne + speedTolerance)
-            if abs(x-xMin) < abs(vxFinal) & (not slowingDown):
+            if (abs(x-xMin) < abs(vxFinal)) & (not slowingDown):
                 return(True)
             else:
                 return(False)
         if vyFinal > speedTolerance: #moving up
             slowingDown =  vyFinal < (vyMoyenne - speedTolerance)
-            if abs(y-yMax) < abs(vyFinal) & (not slowingDown):
+            if (abs(y-yMax) < abs(vyFinal)) & (not slowingDown):
                 return(True)
             else:
                 return(False)
         if vyFinal < - speedTolerance: #moving down
             slowingDown =  vyFinal > (yMoyenne + speedTolerance)
-            if abs(y-yMin) < abs(vyFinal) & (not slowingDown):
+            if (abs(y-yMin) < abs(vyFinal)) & (not slowingDown):
                 return(True)
             else:
                 return(False)
