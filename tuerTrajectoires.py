@@ -1,7 +1,5 @@
 import numpy as np
 
-
-
 #--------------------   Parameters   --------------------#
 #boundary = (xMin, xMax, yMin, yMax)
 xmin,xmax,ymin,ymax = (0,4,0,4)
@@ -15,7 +13,12 @@ DirectionChangeTolerance = 2
 #                FONCTIONS AUXILIAIRES                   #
 #--------------------------------------------------------#
 
-#Une trajectoire est une liste de tuples [(x0,y0,h0),(x1,y1,h1),...]
+#Une trajectoire est une liste de tuples [(image0,x0,y0,z0,h0), (image1,x1,y1,z1,h1),...]
+# lActif = [t1,t2,...]
+# lMorte = [t0, t-1, t-2]
+# lFaussesTrajectoires = [t1f, ] (optionnelle)
+
+# (lActif, frame i+1) -????-> (lActif)
 
 def vitesses(trajectoire):
     nPoints = len(trajectoire)
@@ -25,8 +28,9 @@ def vitesses(trajectoire):
         trajectoireArray = np.array(trajectoire) #turn it into an array
         endPs = trajectoireArray[1:]
         startPs = trajectoireArray[:-1]
-        vitesses = endPs[:,:-1] - startPs[:,:-1] #time interval of 1. This may change according to the frame number.
-        return(vitesses)
+        vitessesX = (endPs[:,1] - startPs[:,1])/(endPs[:,0]-startPs[:,0])
+        vitessesY = (endPs[:,2] - startPs[:,2])/(endPs[:,0]-startPs[:,0])
+        return(np.stack((vitessesX,vitessesY), axis= 1))
 
 def vitesseMoyenne(trajectoire, nPastVelocities):
     if nPastVelocities < 1 :
@@ -38,14 +42,17 @@ def vitesseMoyenne(trajectoire, nPastVelocities):
         return(moyenne)
 
 def tempsDeVie(trajectoire):
-    return(len(trajectoire))
+    framesArray= np.array(trajectoire)[:,0]
+    return(framesArray[-1] - framesArray[0])
 
 def tempsDeVieMoyenne(trajectoires, nbTrajectoires):
     n = len(trajectoires)
     consideredTrajectories = trajectories[(n - nbTrajectoires):]
+    totalTime = np.sum(np.array(map(tempsDeVie, consideredTrajectories)))
+    return(totalTime/nbTrajectoires)
 
 #--------------------------------------------------------#
-#                         TESTS                          #
+#                    CONDITIONS                          #
 #--------------------------------------------------------#
 #Avec ces tests on peut tuer ou pas une trajectoire.
 
@@ -56,7 +63,7 @@ def leavesDomain(trajectoire, xMin,xMax,yMin,yMax):
     if np.size(vs) < 1:
         return(False)#trajectory just started and so it probably won't leave! We could take <2 as well.
     else:
-        (x,y,h) = trajectoire[-1] #last/current position
+        (frame,x,y,z,h) = trajectoire[-1] #last/current position
         vxMoyenne = vMoyenne[0] #Mean velocity in x axis
         vyMoyenne = vMoyenne[1] #Mean velocity in y axis
         vxFinal   = vs[-1][0] #Last velocity in x axis
@@ -65,8 +72,6 @@ def leavesDomain(trajectoire, xMin,xMax,yMin,yMax):
             slowingDown =  vxFinal < (vxMoyenne - speedTolerance)
             if (abs(x-xMax) < abs(vxFinal)) & (not slowingDown):
                 return(True)
-            else:
-                return(False)
         if vxFinal < - speedTolerance: #moving left
             slowingDown =  vxFinal > (vxMoyenne + speedTolerance)
             if (abs(x-xMin) < abs(vxFinal)) & (not slowingDown):
@@ -92,14 +97,16 @@ def leavesDomain(trajectoire, xMin,xMax,yMin,yMax):
 #les transfere dans une liste de vraies trajectoires qu'on traversé le domain.
 # On peut aussi les suprimmer, ça veut dire que c'étaient des fausses trajectoires.
 # Nous pourrions ajouter d'autres listes enventuellement pour modéliser le probleme.
-def isNoiseTrajectory(trajectoire, trajectoiresMortes):
+def remainsTooLong(trajectoire, trajectoiresMortes):
     #Condition 1: Trajectory remains inside Domain for too long!
     nbMortes = len(trajectoiresMortes)
     if nbMortes < 1:
         tempsDeVieMoyenne = 0
     else:
         tempsDeVieMoyenne = np.sum(np.array(map(tempsDeVie, trajectoiresMortes)))*(1/nbMortes)
-    remainsTooLong =  tempsDeVie(trajectoire) > (tempsDeVieMoyenne + lifeTimeTolerance)
+    return( tempsDeVie(trajectoire) > (tempsDeVieMoyenne + lifeTimeTolerance))
+
+def changesDirectionTooMuch(trajectoire, trajectoiresMortes):
     #Condition 2: Trajectory changes direction too much (or too fast! --> to implement later)
     vs  = vitesses(trajectoire)
     vxs = np.sign(vs[:,0]) # direction of speeds in x axis
@@ -111,19 +118,19 @@ def isNoiseTrajectory(trajectoire, trajectoiresMortes):
     nbVxChanges = np.size(vxTransitions[change_DirectionX])
     nbVyChanges = np.size(vyTransitions[change_DirectionY])
     changesDirectionTooMuch = nbVxChanges > DirectionChangeTolerance | nbVyChanges > DirectionChangeTolerance
-    #More conditions could be added later. More complex ones too.
-    return(remainsTooLong | changesDirectionTooMuch)
+    return(changesDirectionTooMuch)
 
+#More conditions could be added later. More complex ones too.
 
 #--------------------------------------------------------#
 #                     CODE TESTING                       #
 #--------------------------------------------------------#
-t1 = [(1,2,1),(1,1,1),(0.5,0.5,1),(0.2,0.2,1), (0.1,0.2,1)]
-t2 = [(2,2,2),(1,1,2),(2.1,0.5,2),(2,2,2),(1,1,2),(2.1,0.5,2),(2,2,2),(1,1,2),(2.1,0.5,2),(2,2,2),(1,1,2),(2.1,0.5,2),(2,2,2)] # turns around
+t1 = [(1,1,2,1,9),(2,1,1,1,9),(3,0.5,0.5,1,9),(4,0.2,0.2,1,9), (5,0.1,0.2,1,9)]
+t2 = [(1,2,2,2,8),(2,1,1,2,8),(3,2.1,0.5,2,8),(4,2,2,2,8),(6,1,1,2,8),(7,2.1,0.5,2,8),(8,2,2,2,8),(9,1,1,2,8),(10,2.1,0.5,2,8),(11,2,2,2,8),(12,1,1,2,8)]#,(2.1,0.5,2),(2,2,2)] # turns around
 deadTrajectories = []
 
 print("trajectoire 2")
-print(t2)
+print("t2")
 print("vitesses")
 print(vitesses(t2))
 print("vitesses moyenne (last 2 velocities considered)")
@@ -134,5 +141,7 @@ print("speed Tolerance")
 print(speedTolerance)
 print("leaves the domain?")
 print(leavesDomain(t2, xmin,xmax,ymin,ymax))
-print("changes direction Too many times ?")
-print(isNoiseTrajectory(t2, deadTrajectories))
+print("#changes direction Too many times ?")
+print(changesDirectionTooMuch(t2, deadTrajectories))
+print("remains in domain for too long?")
+print(remainsTooLong(t2,deadTrajectories))
