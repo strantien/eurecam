@@ -10,6 +10,8 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import imageio
+import os
+os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies/Challenge_AMIES_EURECAM/")
 
 
 # In[341]:
@@ -189,102 +191,23 @@ def computeTransport(X, Y):
     return(x)
 
 
-# In[352]:
-
-
-# first trajectory 
-IndexImage1=(detections["#image"]==images[0])
-X_im1 =  detections[IndexImage1][:].values #dataframe corresponding to image 1
-trajet1=X_im1
-m=len(trajet1)
-
-
-# In[353]:
-
-
-trajet1
-
-
-# In[354]:
-
-
-for i in range(m,M+1):
-    trajet1=np.append(trajet1,[[4,0,0,0,0]],0) #complete with zeros so that all vectors have same dimensions
-    
-
-
-# In[355]:
-
-
-d=np.array([traj[0:5] for traj in trajet1]) #test to see how I can regain the non zero lines.
-#will be usefull to construct X inside the function :Trajectory(trajet,Y) because X will be constructed using order of poits in trajet
-
-
-# In[356]:
-
-
-ttt=[]
-
-
-# In[357]:
-
-
-d
-
-
-# In[358]:
-
-
-d.tolist()
-
-
-# In[359]:
-
-
-len(d)
-
-
-# In[360]:
-
-
-for i in range(len(d)):
-    if d[i,-1] !=0:
-        ttt.append(d[i,0:5])
-
-
-# In[361]:
-
-
-ttt=np.array(ttt)
-
-
-# In[362]:
-
-
-ttt
-
-
-# In[363]:
-
-
 # first function of trajectories when P is constructed only with equalities-inequalites with 1
 def trajectory(trajet,Y):
     imageActuelle=Y[0,0]
     #from trajet until now, we will construct the X to put in f=computeTransport, 
     #otherwise, if we let f treat initial dataframes it will not take into consideration the rearrangements done in previous steps while construction trajectories
-    d=np.array([traj[-5:] for traj in trajet])
-    d.tolist()
+    d=np.array([traj[-1] for traj in trajet])
+#    d.tolist()
     ttt=[]
-    for i in range(len(d)):
+    for i in range(d.shape[0]):
         if d[i,-1] !=0:
-            ttt.append(d[i,-5:])
-    X=np.array(ttt)       
+            ttt.append(d[i,:])
+    X=np.array(ttt)   
+    X=Y
     P=computeTransport(X, Y)
     nbPtsX = X.shape[0]
     nbPtsY = Y.shape[0]
-    tr=np.array(trajet)
     newV=np.zeros((nbPtsX,5)) #the new points (from image i+1) to be added in our  trajectory 
-    #IGNORE THIS COMMENT! dim=tr.shape #dimensions of trajet i.e if there are m points in an image, dim=(m,2)! m=nbPtsX 
     if nbPtsX==nbPtsY:        
         for i in range(nbPtsX):
             for j in range(nbPtsY):
@@ -312,165 +235,6 @@ def trajectory(trajet,Y):
     m=len(newV)
     for i in range(m,M+1):
         newV=np.append(newV,[[imageActuelle,0,0,0,0]],0)
-    res=np.append(tr,newV,1)    
-    trajet=res.tolist()
+    for k in range(len(trajet)):
+        trajet[k].append(newV[k,:])
     return(trajet) 
-#initially trajet has one column. Each line is a point. After one iteration trajet has two columns. Point trajet[m,n] goes to trajet[m,n+1] in the trajectory path 
-
-
-# In[364]:
-
-
-trajet1
-
-
-# In[365]:
-
-
-#first trajectory important to initialize any procedure
-maskX=(detections["#image"]==4)
-maskY = (detections["#image"]==5)
-X1 =  detections[maskX][:].values #dataframe corresponding to image 4
-Y1 = detections[maskY][:].values #dataframe corresponding to image 5
-trajet=trajectory(trajet1,Y1)
-
-
-# In[366]:
-
-
-trajet
-
-
-# In[367]:
-
-
-d=np.array([traj[-5:] for traj in trajet])
-d
-
-
-# In[368]:
-
-
-d.tolist()
-ttt=[]
-for i in range(len(d)):
-    if d[i,-1] !=0:
-        ttt.append(d[i,-5:])
-X=np.array(ttt)
-
-
-# In[369]:
-
-
-X
-
-
-# In[370]:
-
-
-Y1 #just to verify if results are correct
-
-
-# In[371]:
-
-
-X1 #for verification
-
-
-# In[372]:
-
-
-P=computeTransport(X1,Y1)
-
-
-# In[373]:
-
-
-P #for verification
-
-
-# In[374]:
-
-
-#for verification when nbPntsY< nbPntsX i.e there are points that are associated to nothing~ stay unchanged
-maskX=(detections["#image"]==5) #cause we want to start with image 5
-maskY = (detections["#image"]==7)
-#X =  detections[maskX][:].values #dataframe corresponding to image i
-Y = detections[maskY][:].values #dataframe corresponding to image i+1
-trajet=trajectory(trajet,Y)
-
-
-# In[375]:
-
-
-trajet
-
-
-# In[376]:
-
-
-X
-
-
-# In[377]:
-
-
-Y
-
-
-# In[378]:
-
-
-Y[0,0]
-
-
-# In[379]:
-
-
-P=computeTransport(X, Y)
-
-
-# In[380]:
-
-
-P
-
-
-# In[61]:
-
-
-for i in range(5):
-    if (all(P[i,j] == 0 for j in range(4))):
-        print(i)
-
-
-# In[114]:
-
-
-nbPtsX = X.shape[0]
-nbPtsY = Y.shape[0]
-newV=np.zeros((nbPtsX,2))
-
-
-# In[117]:
-
-
-for i in range(nbPtsX):
-    for j in range(nbPtsY):
-        if P[i,j]==1:
-            newV[i,:]=Y[j,1:3]
-    if (all(P[i,j] == 0 for j in range(nbPtsY))):  
-                newV[i,:]=X[i,1:3]
-
-
-# In[118]:
-
-
-newV
-
-
-# In[ ]:
-
-
-
-
