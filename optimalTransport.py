@@ -1,22 +1,19 @@
 from scipy.optimize import linprog
 import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-import os
-import imageio
 import math as m
 
 #=======================================================#
                    #-FONCTIONS AUXILIARES-#
 #=======================================================#
 #point = [frame,x,y,z,h]
-def distance(p1,p2):
+def distance(p1,p2): #prends deux tuples (ou arrays) de taille 5 et 5 respectivement
     (frame1,x1,y1,z1,h1) = p1
     (frame2,x2,y2,z2,h2) = p2
     if frame2==frame1:
         return(m.sqrt((x2-x1)**2 + (y2-y1)**2 + min(min((h2-h1)**2,h2**2),h1**2)))
     else:
         return(m.sqrt((x2-x1)**2 + (y2-y1)**2 + min(min((h2-h1)**2,h2**2),h1**2)) + 100/abs(frame1-frame2) )
+
 
 #=======================================================#
                    #-Transport Optimal-#
