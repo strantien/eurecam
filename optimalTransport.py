@@ -6,9 +6,8 @@ import math as m
                    #-FONCTIONS AUXILIARES-#
 #=======================================================#
 #point = [frame,x,y,z,h]
-def distance(p1,p2): #prends deux tuples (ou arrays) de taille 6 et 5 respectivement
-    (frame1,x1,y1,z1,h1,v1) = p1
-    (vx,vy) = v1 #past velocity of the trajectory. vitesse moyenne pourrait aussi etre consideré!
+def distance(p1,p2): #prends deux tuples (ou arrays) de taille 5 et 5 respectivement
+    (frame1,x1,y1,z1,h1) = p1
     (frame2,x2,y2,z2,h2) = p2
     if frame2==frame1:
         return(m.sqrt((x2-x1)**2 + (y2-y1)**2 + min(min((h2-h1)**2,h2**2),h1**2)))
