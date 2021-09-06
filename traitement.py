@@ -6,10 +6,11 @@ import optimalTransport as ot
 #                          Auxilary Functions
 #------------------------------------------------------------------------------#
 
+
 def vitesses(trajectoire): #Prend une liste de tuples. Returns a list of tuples [(vx,vy)].
     nPoints = len(trajectoire)
     if nPoints < 2:
-        return(np.array([]))
+        return([])
     else:
         trajectoireArray = np.array(trajectoire) #turn it into an array
         endPs = trajectoireArray[1:]
@@ -22,7 +23,7 @@ def vitesses(trajectoire): #Prend une liste de tuples. Returns a list of tuples 
         return(vs)
 
 def vitesseMoyenne(trajectoire, nPastVelocities): #prends une liste de tuples. Returns a tuple (vx,vy)
-    if nPastVelocities < 1 :
+    if nPastVelocities < 1 or len(trajectoire) < 2:
         return((0,0)) # Choix arbitraire (mais raisonnable!)
     else:
         n = min(len(trajectoire) - 1, nPastVelocities)
@@ -83,8 +84,7 @@ def isNoise(point, noiseList, noiseTol):#Prends un np.array ou un tuple, et une 
 def nouveauTrajet(point): # Prends un array 1D ou tuple (avec 5 elements exactement!). Returns a trajectory.
     p = tuple(point)
     (frame,x,y,z,h) = p
-    velocity = (0,0) # we take every new trajectory to have a null velocity component.
-    return([(frame,x,y,z,h,velocity)])
+    return([(frame,x,y,z,h)])
 #------------------------------------------------------------------------------#
 #                           Functions applied on trajectories
 #------------------------------------------------------------------------------#
@@ -113,7 +113,7 @@ def leavesDomain(trajectoire, xMin,xMax,yMin,yMax, speedTolerance, nPastVs):
             if (abs(y-yMax) < abs(vyFinal)) & (not slowingDown):
                 return(True)
         if vyFinal < - speedTolerance: #moving down
-            slowingDown =  vyFinal > (yMoyenne + speedTolerance)
+            slowingDown =  vyFinal > (vyMoyenne + speedTolerance)
             if (abs(y-yMin) < abs(vyFinal)) & (not slowingDown):
                 return(True)
         return(False)
@@ -124,8 +124,8 @@ def remainsTooLong(trajectoire, trajectoiresMortes, lifeTimeTolerance, baseLifeT
     if nbMortes < 1:
         tempsDeVieMoyenne = 0
     else:
-        tempsDeTrajectoiresMortes0 = map(tempsDeVie, trajectoiresMortes)
-        tempsDeTrajectoiresMortesArray =np.array(tempsDeTrajectoiresMortes0)
+        tempsDeTrajectoiresMortes0 = [tempsDeVie(traj) for traj in trajectoiresMortes]
+        tempsDeTrajectoiresMortesArray = np.array(tempsDeTrajectoiresMortes0)
         tempsDeVieMoyenne = np.sum(tempsDeTrajectoiresMortesArray)*(1/nbMortes)
     if tempsDeVieMoyenne ==0:
         return(tempsDeVie(trajectoire) > baseLifeTime)
@@ -135,14 +135,17 @@ def remainsTooLong(trajectoire, trajectoiresMortes, lifeTimeTolerance, baseLifeT
 def changesDirectionTooMuch(trajectoire, trajectoiresMortes, DirectionChangeTolerance):
     #Condition 2: Trajectory changes direction too much (or too fast! --> to implement later)
     vs0 = vitesses(trajectoire)
-    vs  = np.array(vs)
-    vxs = np.sign(vs[:,0]) # direction of speeds in x axis
-    vys = np.sign(vs[:,1]) # directions of speeds in y axis
-    vxTransitions = vxs[:-1]*vxs[1:] # an array of {0,1,-1}, where -1 means a change in direction
-    vyTransitions = vys[:-1]*vys[1:] # an array of {0,1,-1}, where -1 means a change in direction
-    change_DirectionX = vxTransitions < 0
-    change_DirectionY = vyTransitions < 0
-    nbVxChanges = np.size(vxTransitions[change_DirectionX])
-    nbVyChanges = np.size(vyTransitions[change_DirectionY])
-    changesDirectionTooMuch = (nbVxChanges + nbVyChanges) > DirectionChangeTolerance
-    return(changesDirectionTooMuch)
+    if len(vs0) == 0:
+        return(False)
+    else:
+        vs  = np.array(vs0)
+        vxs = np.sign(vs[:,0]) # direction of speeds in x axis
+        vys = np.sign(vs[:,1]) # directions of speeds in y axis
+        vxTransitions = vxs[:-1]*vxs[1:] # an array of {0,1,-1}, where -1 means a change in direction
+        vyTransitions = vys[:-1]*vys[1:] # an array of {0,1,-1}, where -1 means a change in direction
+        change_DirectionX = vxTransitions < 0
+        change_DirectionY = vyTransitions < 0
+        nbVxChanges = np.size(vxTransitions[change_DirectionX])
+        nbVyChanges = np.size(vyTransitions[change_DirectionY])
+        changesDirectionTooMuch = (nbVxChanges + nbVyChanges) > DirectionChangeTolerance
+        return(changesDirectionTooMuch)
