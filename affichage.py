@@ -112,15 +112,45 @@ def plotTransportSuccessif(dataset):
                  #-FILM AVEC TRAJECTOIRES COMPLETES-#
 #=======================================================#
 
-t1 = [[4.0, 151.0, -23.0, 179.0, 1.0], [5.0, 154.0, -26.0, 183.0, 1.0] ,[6, 152, -41, 287, 103], [7, 153, 26, 174, 1], [8, 153, 26, 174, 1], [9, 152, -22, 286, 105]]
-t2 = [[4.0, 153.0, 25.0, 174.0, 2.0], [5.0, 153.0, 25.0, 174.0, 2.0], [6, 152, -27, 286, 107], [7, 158, 92, 174, 1], [8, 158, 92, 174, 1]]
+# t1 = [[4.0, 151.0, -23.0, 179.0, 1.0], [5.0, 154.0, -26.0, 183.0, 1.0] ,[6, 152, -41, 287, 103], [7, 153, 26, 174, 1], [8, 153, 26, 174, 1], [9, 152, -22, 286, 105]]
+# t2 = [[4.0, 153.0, 25.0, 174.0, 2.0], [5.0, 153.0, 25.0, 174.0, 2.0], [6, 152, -27, 286, 107], [7, 158, 92, 174, 1], [8, 158, 92, 174, 1]]
+#
+# trajectories = [t1, t2]
 
-trajectories = [t1, t2]
-
-
-#colors = ['red', 'pink', 'blue', 'green', 'grey']
 colors = list(mcolors.CSS4_COLORS.keys())
 colors = colors[colors.index('red'):]
+
+#préparation des trajectoires : si une image est sautée, on recopie le point provenant de l'image précédente
+def fillInTrajectories(trajectories):
+
+    detfile = "data_detection/" + dataset + "/detection.txt"
+    imgdir  = "data_detection/" + dataset + "/images/"
+
+    file = open(detfile, "r")
+    l0 = file.readline()
+    l1 = file.readline()
+    f,cx,cy = np.array(l1.split()).astype(int)
+    file.close()
+
+    detections = pd.read_csv(detfile,delimiter=" ",skiprows=2)
+    images = np.unique(detections["#image"].values)
+
+    trajectoriesFilled = []
+    for traj in trajectories:
+        trajCopy = traj.copy()
+        trajFilled = []
+        trajCopy.reverse()  #on la vide par la fin
+        pi = trajCopy[-1]   #point provenant de l'image précédente
+        for i in images:
+            if trajCopy[-1][0] == i:
+                pi = trajCopy.pop()
+            else:
+                pi = list(pi)
+                pi[0] = i
+                pi = tuple(pi)
+            trajFilled.append(pi)
+        trajectoriesFilled.append(trajFilled)
+    return(trajectoriesFilled)
 
 def plotComplete(dataset, trajectories):
 
@@ -136,8 +166,12 @@ def plotComplete(dataset, trajectories):
     detections = pd.read_csv(detfile,delimiter=" ",skiprows=2)
     images = np.unique(detections["#image"].values)
 
+    trajectoriesFilm = fillInTrajectories(trajectories)
+
     plt.ion()
     fig = plt.figure()
+    snapNumber = 0  #counting the images for ffmpeg
+
     for i in images:
         print("==> image : ",i)
         plt.clf()
@@ -151,7 +185,8 @@ def plotComplete(dataset, trajectories):
 
         plt.imshow(im)
 
-        for traj in trajectories:
+        for traj in trajectoriesFilm:
+            colorTraj = colors[trajectoriesFilm.index(traj)]
             for k in range(len(traj)):
                 if traj[k][0] == i:
                     for j in range(k):
@@ -159,11 +194,15 @@ def plotComplete(dataset, trajectories):
                         iy_trajJ = 0.5 * (traj[j][2] / traj[j][3] * f + cy)
                         ix_trajJPlus1 = 0.5 * (traj[j+1][1] / traj[j+1][3] * f + cx)
                         iy_trajJPlus1 = 0.5 * (traj[j+1][2] / traj[j+1][3] * f + cy)
-                        plt.plot([ix_trajJ, ix_trajJPlus1], [iy_trajJ, iy_trajJPlus1], color = colors[trajectories.index(traj)], linewidth = .4)
+                        # plt.scatter(ix_trajJ, iy_trajJ, marker="+",color=colorTraj)
+                        # plt.scatter(ix_trajJPlus1, iy_trajJPlus1, marker="+",color=colorTraj)
+                        plt.plot([ix_trajJ, ix_trajJPlus1], [iy_trajJ, iy_trajJPlus1], color = colorTraj, linewidth = .6)
                         #if j > 0:
                         if j == k-1:
-                            plt.arrow(0.5 * (ix_trajJ + ix_trajJPlus1), 0.5 * (iy_trajJ + iy_trajJPlus1), 0.5 * (ix_trajJPlus1 - ix_trajJ), 0.5 * (iy_trajJPlus1 - iy_trajJ), shape='full', lw=0, length_includes_head=True, head_width=5, color = colors[trajectories.index(traj)])
-
+                            plt.arrow(0.5 * (ix_trajJ + ix_trajJPlus1), 0.5 * (iy_trajJ + iy_trajJPlus1), 0.5 * (ix_trajJPlus1 - ix_trajJ), 0.5 * (iy_trajJPlus1 - iy_trajJ), shape='full', lw=0, length_includes_head=True, head_width=10, color = colorTraj)
+        plt.savefig('dataset001NotKilled/dataset' + dataset + '_snap' + str(snapNumber + 1))
+        snapNumber += 1
+        #to create a film from the saved images, call ffmpeg -r 2 -i dataset001_snap%d.png -qscale:v 1 dataset001_movie.mp4 in a terminal
         plt.pause(0.1)
         #input('type enter to continue')
         plt.draw()
