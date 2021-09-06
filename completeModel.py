@@ -146,3 +146,17 @@ def cleanTrajectories(Trajectories, noiseList, deadTrajectories,speedTolerance, 
       else:
           stillAlive.append(traj)
   return(stillAlive, noiseList, deadTrajectories)
+
+#==============================================================================#
+#                      Iteration
+#==============================================================================#
+for i in images[:20]:
+    iNext = images[int(np.argwhere(images == i))+1]
+    maskY = (detections["#image"]==iNext)
+    Y = detections[maskY][:].values # np.array
+    #clean les points
+    (Y,noiseList0) = cleanPoints(Y, noiseList0, duplicateTolerance0, noiseEqTolerance0)
+    #clean trajectoires
+    (trajectoiresActives0,noiseList0, trajectoiresMortes0) = cleanTrajectories(trajectoiresActives0, noiseList0, trajectoiresMortes0, speedTolerance0, nbPastVelocities0, lifeTimeTolerance0, baseLifeTime0, DirectionChangeTolerance0)
+    #Linking Process
+    trajectoiresActives0 = trajectory(trajectoiresActives0, Y)
