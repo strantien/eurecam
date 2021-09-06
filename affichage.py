@@ -118,7 +118,7 @@ def plotTransportSuccessif(dataset):
 # trajectories = [t1, t2]
 
 colors = list(mcolors.CSS4_COLORS.keys())
-colors = colors[colors.index('red'):]
+#colors = colors[colors.index('red'):]
 
 #préparation des trajectoires : si une image est sautée, on recopie le point provenant de l'image précédente
 def fillInTrajectories(trajectories):
@@ -137,18 +137,32 @@ def fillInTrajectories(trajectories):
 
     trajectoriesFilled = []
     for traj in trajectories:
+
         trajCopy = traj.copy()
-        trajFilled = []
-        trajCopy.reverse()  #on la vide par la fin
-        pi = trajCopy[-1]   #point provenant de l'image précédente
-        for i in images:
-            if trajCopy[-1][0] == i:
-                pi = trajCopy.pop()
-            else:
-                pi = list(pi)
-                pi[0] = i
-                pi = tuple(pi)
-            trajFilled.append(pi)
+
+        # trajFilled = []
+        # trajCopy.reverse()  #on la vide par la fin
+        # pi = trajCopy[-1]   #point provenant de l'image précédente
+
+        trajFilled = [trajCopy[0]]
+        for p in trajCopy:
+            while p[0] > (trajFilled[-1][0] + 1):
+                q = trajFilled[-1]
+                q = list(q)
+                q[0] = trajFilled[-1][0] + 1
+                q = tuple(q)
+                trajFilled.append(q)
+            trajFilled.append(p)
+
+        # for i in images:
+        #     if trajCopy[-1][0] == i:
+        #         pi = trajCopy.pop()
+        #     else:
+        #         pi = list(pi)
+        #         pi[0] = i
+        #         pi = tuple(pi)
+        #     trajFilled.append(pi)
+
         trajectoriesFilled.append(trajFilled)
     return(trajectoriesFilled)
 
@@ -166,6 +180,7 @@ def plotComplete(dataset, trajectories):
     detections = pd.read_csv(detfile,delimiter=" ",skiprows=2)
     images = np.unique(detections["#image"].values)
 
+#    trajectoriesFilm = trajectories
     trajectoriesFilm = fillInTrajectories(trajectories)
 
     plt.ion()
@@ -185,6 +200,15 @@ def plotComplete(dataset, trajectories):
 
         plt.imshow(im)
 
+        mask = (detections["#image"]==i)
+        x = detections[mask]["x"].values
+        y = detections[mask]["y"].values
+        z = detections[mask]["z"].values
+        h = detections[mask]["h"].values
+        ix = 0.5*(x/z*f+cx)
+        iy = 0.5*(y/z*f+cy)
+        plt.scatter(ix, iy, marker="+",color="red");
+
         for traj in trajectoriesFilm:
             colorTraj = colors[trajectoriesFilm.index(traj)]
             for k in range(len(traj)):
@@ -194,8 +218,8 @@ def plotComplete(dataset, trajectories):
                         iy_trajJ = 0.5 * (traj[j][2] / traj[j][3] * f + cy)
                         ix_trajJPlus1 = 0.5 * (traj[j+1][1] / traj[j+1][3] * f + cx)
                         iy_trajJPlus1 = 0.5 * (traj[j+1][2] / traj[j+1][3] * f + cy)
-                        # plt.scatter(ix_trajJ, iy_trajJ, marker="+",color=colorTraj)
-                        # plt.scatter(ix_trajJPlus1, iy_trajJPlus1, marker="+",color=colorTraj)
+                        #plt.scatter(ix_trajJ, iy_trajJ, marker="+",color=colorTraj)
+                        #plt.scatter(ix_trajJPlus1, iy_trajJPlus1, marker="+",color=colorTraj)
                         plt.plot([ix_trajJ, ix_trajJPlus1], [iy_trajJ, iy_trajJPlus1], color = colorTraj, linewidth = .6)
                         #if j > 0:
                         if j == k-1:
