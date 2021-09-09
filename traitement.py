@@ -61,7 +61,10 @@ def peopleEqualityFunc(trendTolerance,  velocityVector, p1, p2, equalityToleranc
             (x1,y1,z1,h1) = tuple(p1[1:5])
             (x2,y2,z2,h2) = tuple(p2[1:5])
             dpNorm = m.sqrt((x2-x1)**2 + (y2-y1)**2)
-            (unitdpx,unitdpy) = ((x2-x1)/dpNorm, (y2-y1)/dpNorm)
+            if dpNorm ==0:
+                (unitdpx,unitdpy) = (0,0)
+            else:
+                (unitdpx,unitdpy) = ((x2-x1)/dpNorm, (y2-y1)/dpNorm)
             (unitVx,unitVy) = unitVelocityVector
             alignment = abs(unitdpx*unitVx + unitdpy*unitVy)
             heightCost1 = (h2-h1)**2
