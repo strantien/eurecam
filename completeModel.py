@@ -45,7 +45,7 @@ ymax = max(detections["y"].values)
 borderToleranceX0 = 10
 borderToleranceY0 = 10
 tooBigSpeedNorm0 = 15 # This is used to help avoid linking noisy trajectories with actual trajectories
-trendTolerance0 =  5 # Value at which we consider that our camera sees a chaotic environment or a one directional movement
+trendTolerance0 =  7 # Value at which we consider that our camera sees a chaotic environment or a one directional movement
 velocityImportanceCoeff0 = 10 #Used to compared expected values with actualy matches.
 heightCoeff0 = 10 # used to give importance to the heightCost
 duplicateTolerance0 = 10 #tolerance de la "distance" pour differencier 2 personnes dans une meme image.
@@ -177,6 +177,7 @@ def cleanPoints(Y, noiseList, deadTrajectories, duplicateTol, noiseEqTolerance, 
     newTrajectories = []
     noNoiseY = []
     cleanY = []
+    #Remove Noise
     for p in range(len(Y)) :
         if t.isNoise(Y[p], noiseList, noiseEqTolerance):
             tuplePoint = tuple(Y[p])
