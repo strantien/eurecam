@@ -5,7 +5,7 @@ import traitement as t
 #=======================================================#
                    #-FONCTIONS AUXILIARES-#
 #=======================================================#
-meanPreference0 = 0.7
+meanPreference0 = 0.75
 #point = (frame,x,y,z,h)
 #traj = [trajState]
 #trajState = (frame, x, y,z h, vf, vm)
