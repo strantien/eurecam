@@ -1,19 +1,48 @@
 from scipy.optimize import linprog
 import numpy as np
 import math as m
-
+import traitement as t
 #=======================================================#
                    #-FONCTIONS AUXILIARES-#
 #=======================================================#
-#point = [frame,x,y,z,h]
-def distance(p1,p2): #prends deux tuples (ou arrays) de taille 5 et 5 respectivement
-    (frame1,x1,y1,z1,h1) = p1
+meanPreference0 = 0.7
+#point = (frame,x,y,z,h)
+#traj = [trajState]
+#trajState = (frame, x, y,z h, vf, vm)
+def distance(p1,p2, velocityCoeff, heightCoeff, VelocityTrendVector, trendTolerance): #prends deux tuples de taille 7 et 5 respectivement
+    (frame1,x1,y1,z1,h1,lastVelocity, meanVelocity) = p1
     (frame2,x2,y2,z2,h2) = p2
-    if frame2==frame1:
-        return(m.sqrt((x2-x1)**2 + (y2-y1)**2 + min(min((h2-h1)**2,h2**2),h1**2)))
-    else:
-        return(m.sqrt((x2-x1)**2 + (y2-y1)**2 + min(min((h2-h1)**2,h2**2),h1**2)) + 100/abs(frame1-frame2) )
-
+    vx = lastVelocity[0]
+    vy = lastVelocity[1]
+    meanVx = meanVelocity[0]
+    meanVy = meanVelocity[1]
+    expectedX = x1 + vx
+    expectedY = y1 + vy
+    meanExpectedX = x1 + meanVx
+    meanExpectedY = y1 + meanVy
+    (vTx, vTy) = VelocityTrendVector
+    velocityTrendVectorNorm = m.sqrt(vTx**2 + vTy**2)
+    if velocityTrendVectorNorm < trendTolerance: #We don't take into accounts trend.
+        heightCost = min(min(abs(h2-h1),abs(h2)),abs(h1))
+        velocityCost =  (1-meanPreference0)*m.sqrt((x2-expectedX)**2 + (y2-expectedY)**2) +  meanPreference0*m.sqrt((x2-meanExpectedX)**2 + (y2-meanExpectedY)**2)
+        distanceCost = m.sqrt((x2-x1)**2 + (y2-y1)**2)
+        return( distanceCost + heightCoeff*heightCost + velocityCoeff*velocityCost)
+    else: #We realise there may be a trend. For example people mainly go across in one direction (North-South & South-North).
+        unitVelocityTrendVector = (vTx/velocityTrendVectorNorm, vTy/velocityTrendVectorNorm)
+        dpNorm = m.sqrt((x2-x1)**2 + (y2-y1)**2)
+        if dpNorm > 0 :
+            (unitdpx,unitdpy) = ((x2-x1)/dpNorm, (y2-y1)/dpNorm)
+        else:
+            (unitdpx,unitdpy) = (0,0)
+        (unitVTx,unitVTy) = unitVelocityTrendVector
+        trendAlignment = abs(unitdpx*unitVTx + unitdpy*unitVTy)
+        heightCost1 = abs(h2-h1)
+        heightCost2 = min(min(abs(h2-h1),abs(h2)),abs(h1))
+        heightCost = (1-trendAlignment)*heightCost1 + trendAlignment*heightCost2
+        distanceCost = m.sqrt((x2-x1)**2 + (y2-y1)**2)
+        velocityCost =  (1-meanPreference0)*m.sqrt((x2-expectedX)**2 + (y2-expectedY)**2) +  meanPreference0*m.sqrt((x2-meanExpectedX)**2 + (y2-meanExpectedY)**2)
+        totalCost = distanceCost + heightCoeff*heightCost + velocityCoeff*velocityCost
+        return(totalCost)
 
 #=======================================================#
                    #-Transport Optimal-#
@@ -21,21 +50,20 @@ def distance(p1,p2): #prends deux tuples (ou arrays) de taille 5 et 5 respective
 
 method = 'revised simplex'
 
-def computeTransport(X, Y):
+def computeTransport(X, Y, velocityImportanceCoeff, heightCoeff, VelocityTrendVector, trendTolerance): #takes in two lists of tuples, and some coefficient used for the distance
 
-    nbPtsNuage1 = X.shape[0]
-    nbPtsNuage2 = Y.shape[0]
+    nbPtsNuage1 = len(X)
+    nbPtsNuage2 = len(Y)
     C = np.zeros([nbPtsNuage1, nbPtsNuage2])
 
     for i in range(nbPtsNuage1):
         for j in range(nbPtsNuage2):
-            C[i,j] = distance(X[i],Y[j])
+            C[i,j] = distance(X[i],Y[j],velocityImportanceCoeff, heightCoeff, VelocityTrendVector, trendTolerance)
 
     c = np.ravel(C)
     #l'ordre de notre vecteur (pour le problème linèaire) est :
     #p11, p12, p13, p14, p15, p21, p22, ... etc
     #où "pij"= connexion entre le point i du nuage1 et le point j du nuage2.
-
     nbVariables = nbPtsNuage1*nbPtsNuage2
     nbContraintes = nbPtsNuage2 + nbPtsNuage1
 

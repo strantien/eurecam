@@ -6,7 +6,7 @@ import os
 import imageio
 import matplotlib.colors as mcolors
 
-os.chdir("/home/trantien/Bureau/icj/doctorat/challenge_amies/Challenge_AMIES_EURECAM/")
+os.chdir("/Users/pjaramil/Documents/gitFiles/Challenge_AMIES_EURECAM/")
 
 import traitement as t
 import optimalTransport as ot
@@ -137,13 +137,7 @@ def fillInTrajectories(trajectories):
 
     trajectoriesFilled = []
     for traj in trajectories:
-
         trajCopy = traj.copy()
-
-        # trajFilled = []
-        # trajCopy.reverse()  #on la vide par la fin
-        # pi = trajCopy[-1]   #point provenant de l'image précédente
-
         trajFilled = [trajCopy[0]]
         for p in trajCopy:
             while p[0] > (trajFilled[-1][0] + 1):
@@ -153,15 +147,6 @@ def fillInTrajectories(trajectories):
                 q = tuple(q)
                 trajFilled.append(q)
             trajFilled.append(p)
-
-        # for i in images:
-        #     if trajCopy[-1][0] == i:
-        #         pi = trajCopy.pop()
-        #     else:
-        #         pi = list(pi)
-        #         pi[0] = i
-        #         pi = tuple(pi)
-        #     trajFilled.append(pi)
 
         trajectoriesFilled.append(trajFilled)
     return(trajectoriesFilled)
@@ -224,7 +209,7 @@ def plotComplete(dataset, trajectories):
                         #if j > 0:
                         if j == k-1:
                             plt.arrow(0.5 * (ix_trajJ + ix_trajJPlus1), 0.5 * (iy_trajJ + iy_trajJPlus1), 0.5 * (ix_trajJPlus1 - ix_trajJ), 0.5 * (iy_trajJPlus1 - iy_trajJ), shape='full', lw=0, length_includes_head=True, head_width=10, color = colorTraj)
-        plt.savefig('dataset001NotKilled/dataset' + dataset + '_snap' + str(snapNumber + 1))
+        plt.savefig('results/' + dataset + '_snap' + str(snapNumber + 1))
         snapNumber += 1
         #to create a film from the saved images, call ffmpeg -r 2 -i dataset001_snap%d.png -qscale:v 1 dataset001_movie.mp4 in a terminal
         plt.pause(0.1)
