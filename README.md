@@ -5,6 +5,6 @@ Equipe: Sebastien Trantien, Pedro Jaramillo, Kyriaki Dariva
 
 a faire :
 + instructions pour faire marcher le code dans une machine quelconque
-+ Description de chauque fichier
++ Description de chaque fichier
 + Descriptions du format des données
 + etc.
