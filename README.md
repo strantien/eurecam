@@ -1,7 +1,7 @@
 # eurecam
 Projet Eurecam du challenge AMIES, groupe Jinko.
 
-Equipe: Sebastien Trantien, Pedro Jaramillo, Kyriaki Dariva
+Equipe: Kyriaki Dariva, Pedro Jaramillo, Sebastien Tran Tien
 
 a faire :
 + instructions pour faire marcher le code dans une machine quelconque
